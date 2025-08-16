@@ -5,25 +5,41 @@ import (
 	"fmt"
 
 	"github.com/dragsbruh/hypersonic/internal/config"
-	"github.com/dragsbruh/hypersonic/internal/database/queries"
+	"github.com/dragsbruh/hypersonic/internal/database/query"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var Queries *queries.Queries
-var Pool *pgxpool.Pool
+type PGQueries struct {
+	query.Queries
+	Pool *pgxpool.Pool
+}
 
-func Init(ctx context.Context) error {
-	conf, err := pgxpool.ParseConfig(config.DatabaseURL)
+func (q *PGQueries) Tx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, *PGQueries, error) {
+	tx, err := q.Pool.BeginTx(ctx, opts)
 	if err != nil {
-		return fmt.Errorf("parse dburl: %w", err)
+		return nil, nil, err
+	}
+	queries := q.WithTx(tx)
+	return tx, &PGQueries{
+		Queries: *queries,
+		Pool:    q.Pool,
+	}, err
+}
+
+func Setup(ctx context.Context) (*PGQueries, error) {
+	conf, err := pgxpool.ParseConfig(config.DATABASE_URL)
+	if err != nil {
+		return nil, fmt.Errorf("parse dburl: %w", err)
 	}
 
-	Pool, err = pgxpool.NewWithConfig(ctx, conf)
+	pool, err := pgxpool.NewWithConfig(ctx, conf)
 	if err != nil {
-		return fmt.Errorf("new pool: %w", err)
+		return nil, fmt.Errorf("new pool: %w", err)
 	}
 
-	Queries = queries.New(Pool)
-
-	return nil
+	return &PGQueries{
+		Queries: *query.New(pool),
+		Pool:    pool,
+	}, nil
 }
