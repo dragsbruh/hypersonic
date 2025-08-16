@@ -10,34 +10,34 @@ import (
 )
 
 type HypersonicArtist struct {
-	Hash string
-	Name string
+	Hash string `json:"hash"`
+	Name string `json:"name"`
 }
 
 type HypersonicAlbum struct {
-	Hash string
+	Hash string `json:"hash"`
 	Name string
 
-	Artists []HypersonicArtist
+	Artists []HypersonicArtist `json:"artists"`
 
-	TotalTracks int
-	TotalDiscs  int
+	TotalTracks int `json:"totalTracks"`
+	TotalDiscs  int `json:"totalDiscs"`
 }
 
 type HypersonicTrack struct {
-	Hash string
-	Name string
+	Hash string `json:"hash"`
+	Name string `json:"name"`
 
-	Artists []HypersonicArtist
+	Artists []HypersonicArtist `json:"artists"`
 
-	Album       *HypersonicAlbum
-	DiscNumber  int
-	TrackNumber int
-	Year        int
-	Genre       string
+	Album       *HypersonicAlbum `json:"album"`
+	DiscNumber  int              `json:"discNumber"`
+	TrackNumber int              `json:"trackNumber"`
+	Year        int              `json:"year"`
+	Genre       string           `json:"genre"`
 
-	FilePath string
-	FileHash string
+	FilePath string `json:"filePath"`
+	FileHash string `json:"fileHash"`
 }
 
 func CalculateHash(args ...string) string {
