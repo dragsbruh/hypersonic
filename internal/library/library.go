@@ -16,7 +16,7 @@ type HypersonicArtist struct {
 
 type HypersonicAlbum struct {
 	Hash string `json:"hash"`
-	Name string
+	Name string `json:"name"`
 
 	Artists []HypersonicArtist `json:"artists"`
 
