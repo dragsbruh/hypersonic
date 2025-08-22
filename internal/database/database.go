@@ -5,41 +5,86 @@ import (
 	"fmt"
 
 	"github.com/dragsbruh/hypersonic/internal/config"
-	"github.com/dragsbruh/hypersonic/internal/database/query"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PGQueries struct {
-	query.Queries
+// stolen cutely from sqlc
+type DBTX interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+type Database struct {
 	Pool *pgxpool.Pool
+	tx   pgx.Tx
 }
 
-func (q *PGQueries) Tx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, *PGQueries, error) {
-	tx, err := q.Pool.BeginTx(ctx, opts)
+func (db *Database) Begin(ctx context.Context) (*Database, error) {
+	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("begin tx: %w", err)
 	}
-	queries := q.WithTx(tx)
-	return tx, &PGQueries{
-		Queries: *queries,
-		Pool:    q.Pool,
-	}, err
+
+	return &Database{
+		Pool: db.Pool,
+		tx:   tx,
+	}, nil
 }
 
-func Setup(ctx context.Context) (*PGQueries, error) {
-	conf, err := pgxpool.ParseConfig(config.DATABASE_URL)
-	if err != nil {
-		return nil, fmt.Errorf("parse dburl: %w", err)
+func (db *Database) DBTX() DBTX {
+	if db.tx == nil {
+		return db.Pool
+	}
+	return db.tx
+}
+
+func (db *Database) Rollback(ctx context.Context) error {
+	if db.tx == nil {
+		return fmt.Errorf("not a tx")
+	}
+	if err := db.tx.Rollback(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *Database) Commit(ctx context.Context) error {
+	if db.tx == nil {
+		return fmt.Errorf("not a tx")
 	}
 
-	pool, err := pgxpool.NewWithConfig(ctx, conf)
+	if err := db.tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (db *Database) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	return db.DBTX().Exec(ctx, sql, args...)
+}
+
+func (db *Database) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	return db.DBTX().Query(ctx, sql, args...)
+}
+
+func (db *Database) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	return db.DBTX().QueryRow(ctx, sql, args...)
+}
+
+func Init(ctx context.Context) (*Database, error) {
+	pool, err := pgxpool.New(ctx, config.DatabaseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("new pool: %w", err)
 	}
 
-	return &PGQueries{
-		Queries: *query.New(pool),
-		Pool:    pool,
-	}, nil
+	db := &Database{
+		Pool: pool,
+		tx:   nil,
+	}
+
+	return db, nil
 }

@@ -1,27 +1,35 @@
 # hypersonic
 
-## What is this
+## todo
 
-Self-hosted music server like navidrome written in golang/svelte
+- [ ] database queries
 
-## TO-DO (in order)
+  - [ ] albums
+    - [x] create album
+    - [x] get album by hash (includes album artists)
+    - [x] get albums by artist
+    - [ ] search albums by name
+    - [ ] paginate (sort by params + direction)
+    - [x] delete album
 
-- [ ] playback of tracks
-- [ ] homepage browsing (latest tracks, history)
-- [ ] playlists
-- [ ] basic explore
-- [ ] advanced explore (genre/searching/)
-- [ ] recommendations
-- [ ] synced lyrics
+  - [ ] tracks
+    - [x] create track
+    - [x] get track by hash (includes artists and albums, does not include album artists)
+    - [x] get tracks by album
+    - [x] get tracks by artist
+    - [ ] get tracks by genre
+    - [ ] search tracks by name
+    - [x] paginate (sort by params + direction)
+    - [x] delete track
 
-### Tasks
+  - [ ] artists
+    - [x] create artist
+    - [x] get artist by hash
+    - [ ] search artists
+    - [x] delete artist
 
-- [ ] frontend
-  - [ ] login
-  - [ ] homepage
-  - [ ] player
-  - [ ] explore page
-  - [ ] lyrics
-- [x] admin cli (hsctl)
-  - [x] library scanning
-  - [ ] user management
+### meta
+
+- [ ] share duplicated code
+- [ ] handle row not found
+- [ ] this is getting messy, need to rewrite sql with json agg

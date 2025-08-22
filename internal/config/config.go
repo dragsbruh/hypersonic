@@ -2,46 +2,59 @@ package config
 
 import (
 	"crypto/sha256"
+	"fmt"
+	"io/fs"
 	"os"
-	"strings"
 
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/sirupsen/logrus"
 )
 
-var DATABASE_URL, MUSIC_DIR, DATA_DIR, ADDR, ADMIN_NETWORK, ADMIN_ADDR string
-var JWT_SECRET []byte
+var (
+	DatabaseUrl      string
+	MusicRoot        string
+	DataDir          string
+	JWTSecret        []byte
+	SelfRegistration bool
+)
 
-func Load() {
-	DATABASE_URL = ensureEnv("DATABASE_URL")
-	MUSIC_DIR = ensureEnv("MUSIC_DIR")
-	DATA_DIR = ensureEnv("DATA_DIR")
-	ADDR = fallbackEnv("ADDR", ":8080")
+func LoadConfig() error {
+	var ok bool
 
-	adminAddr := fallbackEnv("ADMIN_ADDR", "unix;/var/run/hypersonic/admin.sock")
-	var both bool
-	ADMIN_NETWORK, ADMIN_ADDR, both = strings.Cut(adminAddr, ";")
-	if !both {
-		ADMIN_ADDR = ADMIN_NETWORK
-		ADMIN_NETWORK = "tcp"
+	DatabaseUrl, ok = os.LookupEnv("DATABASE_URL")
+	if !ok {
+		return fmt.Errorf("DATABASE_URL missing")
 	}
 
-	jwtSecret := sha256.Sum256([]byte(ensureEnv("JWT_SECRET")))
-	JWT_SECRET = jwtSecret[:]
-}
-
-func ensureEnv(key string) string {
-	value, exists := os.LookupEnv(key)
-	if !exists {
-		logrus.Fatalf("missing env variable: %q", key)
+	MusicRoot, ok = os.LookupEnv("MUSIC_ROOT")
+	if !ok {
+		return fmt.Errorf("MUSIC_ROOT missing")
 	}
-	return value
-}
 
-func fallbackEnv(key, fallback string) string {
-	value, exists := os.LookupEnv(key)
-	if !exists {
-		return fallback
+	info, err := os.Stat(MusicRoot)
+	if err != nil {
+		return fmt.Errorf("check MUSIC_ROOT: %w", err)
 	}
-	return value
+	if !info.IsDir() {
+		return fmt.Errorf("MUSIC_ROOT is not a dir")
+	}
+
+	DataDir, ok = os.LookupEnv("DATA_DIR")
+	if !ok {
+		return fmt.Errorf("DATA_DIR missing")
+	}
+
+	if err := os.MkdirAll(DataDir, fs.ModePerm); err != nil {
+		return fmt.Errorf("make DATA_DIR: %w", err)
+	}
+
+	jwtSecret, ok := os.LookupEnv("JWT_SECRET")
+	if !ok {
+		return fmt.Errorf("JWT_SECRET missing")
+	}
+	jwtBytes := sha256.Sum256([]byte(jwtSecret))
+	JWTSecret = jwtBytes[:]
+
+	SelfRegistration = os.Getenv("SELF_REGISTRATION") == "enabled"
+
+	return nil
 }

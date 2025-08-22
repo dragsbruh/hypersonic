@@ -1,0 +1,7 @@
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  up:
+    - goose -dir migrations postgres $DATABASE_URL up

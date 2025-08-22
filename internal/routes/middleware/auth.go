@@ -5,23 +5,25 @@ import (
 	"net/http"
 
 	"github.com/dragsbruh/hypersonic/internal/auth"
+	"github.com/sirupsen/logrus"
 )
 
-func IsAuthenticated(next http.Handler) http.Handler {
+func MustAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(auth.CookieName)
+		token, err := r.Cookie(auth.CookieName)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		userID, err := auth.GetJwtUser(cookie.Value)
+		userID, err := auth.GetJWTUser(token.Value)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			logrus.Errorf("error getting jwt user: %v", err)
+			http.Error(w, "jwt error", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), auth.UserID, userID)
+		ctx := context.WithValue(r.Context(), auth.AuthUserID, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
