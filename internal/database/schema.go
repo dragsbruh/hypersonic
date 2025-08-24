@@ -1,17 +1,18 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/dragsbruh/hypersonic/internal/library"
 )
 
 type DatabaseUser struct {
-	ID        string     `json:"id"`
-	Username  string     `json:"username"`
-	Password  string     `json:"password,omitempty"`
-	CreatedAt time.Time  `json:"createdAt"`
-	LoginAt   *time.Time `json:"loginAt"`
+	ID        string       `json:"id"`
+	Username  string       `json:"username"`
+	Password  string       `json:"password,omitempty"`
+	CreatedAt time.Time    `json:"createdAt"`
+	LoginAt   sql.NullTime `json:"loginAt"`
 }
 
 type DatabaseArtist struct {
@@ -27,22 +28,32 @@ func (da DatabaseArtist) Hyper() *library.HypersonicArtist {
 }
 
 type DatabaseAlbum struct {
-	Hash        string
-	Name        string
-	Artwork     bool
-	TotalTracks *int
-	TotalDiscs  *int
-	IndexedAt   time.Time
+	Hash        sql.NullString
+	Name        sql.NullString
+	Artwork     sql.NullBool
+	TotalTracks sql.NullInt64
+	TotalDiscs  sql.NullInt64
+	IndexedAt   sql.NullTime
 }
 
 func (da DatabaseAlbum) Hyper(artists []library.HypersonicArtist) *library.HypersonicAlbum {
+	var tt *int = nil
+	if da.TotalTracks.Valid {
+		t := int(da.TotalTracks.Int64)
+		tt = &t
+	}
+	var td *int = nil
+	if da.TotalDiscs.Valid {
+		t := int(da.TotalDiscs.Int64)
+		td = &t
+	}
 	return &library.HypersonicAlbum{
-		Hash:        da.Hash,
-		Name:        da.Name,
-		Artwork:     da.Artwork,
-		TotalTracks: da.TotalTracks,
-		TotalDiscs:  da.TotalDiscs,
-		IndexedAt:   da.IndexedAt,
+		Hash:        da.Hash.String,
+		Name:        da.Name.String,
+		Artwork:     da.Artwork.Bool,
+		TotalTracks: tt,
+		TotalDiscs:  td,
+		IndexedAt:   da.IndexedAt.Time,
 		Artists:     artists,
 	}
 }
@@ -50,10 +61,10 @@ func (da DatabaseAlbum) Hyper(artists []library.HypersonicArtist) *library.Hyper
 type DatabaseTrack struct {
 	Hash        string
 	Name        string
-	AlbumHash   *string
+	AlbumHash   sql.NullString
 	Duration    int
-	Year        *int
-	Genre       *string
+	Year        sql.NullInt64
+	Genre       sql.NullString
 	TrackNumber int
 	DiscNumber  int
 	FilePath    string
@@ -62,6 +73,15 @@ type DatabaseTrack struct {
 }
 
 func (dt DatabaseTrack) Hyper(album *library.HypersonicAlbum, artists []library.HypersonicArtist) *library.HypersonicTrack {
+	var genre *string = nil
+	if dt.Genre.Valid {
+		genre = &dt.Genre.String
+	}
+	var year *int = nil
+	if dt.Year.Valid {
+		y := int(dt.Year.Int64)
+		year = &y
+	}
 	return &library.HypersonicTrack{
 		Hash:        dt.Hash,
 		Name:        dt.Name,
@@ -70,8 +90,8 @@ func (dt DatabaseTrack) Hyper(album *library.HypersonicAlbum, artists []library.
 		TrackNumber: dt.TrackNumber,
 		DiscNumber:  dt.DiscNumber,
 		Duration:    dt.Duration,
-		Year:        dt.Year,
-		Genre:       dt.Genre,
+		Year:        year,
+		Genre:       genre,
 		FilePath:    dt.FilePath,
 		FileHash:    dt.FileHash,
 		IndexedAt:   dt.IndexedAt,

@@ -31,7 +31,7 @@ func main() {
 	}
 
 	server := http.Server{
-		Addr:    ":8080",
+		Addr:    config.Addr,
 		Handler: routes.Router(db),
 	}
 

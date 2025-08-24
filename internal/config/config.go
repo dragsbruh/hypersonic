@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strconv"
+	"strings"
 
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -15,6 +18,10 @@ var (
 	DataDir          string
 	JWTSecret        []byte
 	SelfRegistration bool
+	Production       bool
+	Administrators   []string
+	Addr             string
+	Concurrency      int
 )
 
 func LoadConfig() error {
@@ -55,6 +62,30 @@ func LoadConfig() error {
 	JWTSecret = jwtBytes[:]
 
 	SelfRegistration = os.Getenv("SELF_REGISTRATION") == "enabled"
+
+	admins := os.Getenv("ADMINS")
+	for userID := range strings.SplitSeq(admins, ",") {
+		userID = strings.TrimSpace(userID)
+
+		Administrators = append(Administrators, userID)
+	}
+
+	Production = os.Getenv("PRODUCTION") == "true"
+	Addr, ok = os.LookupEnv("ADDR")
+	if !ok {
+		Addr = ":8080"
+	}
+
+	c, ok := os.LookupEnv("CONCURRENCY")
+	if ok {
+		Concurrency, err = strconv.Atoi(c)
+		if err != nil {
+			return fmt.Errorf("parse CONCURRENCY: %w", err)
+		}
+	} else {
+		logrus.Warnf("CONCURRENCY is not set, using 2")
+		Concurrency = 2
+	}
 
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sync"
 
@@ -92,7 +91,7 @@ func ScanAndUpdate(ctx context.Context, db *database.Database, scb func(ScanStat
 		Status:  "info",
 		Message: "create worker pool",
 	})
-	err = NewWorkerPool(trackPaths, runtime.NumCPU()/2, func(ctx context.Context, trackPath string) (*library.HypersonicTrack, error) {
+	err = NewWorkerPool(trackPaths, config.Concurrency, func(ctx context.Context, trackPath string) (*library.HypersonicTrack, error) {
 		hash, err := GetFileHash(trackPath)
 		if err != nil {
 			return nil, fmt.Errorf("get hash: %w", err)
@@ -138,10 +137,12 @@ func ScanAndUpdate(ctx context.Context, db *database.Database, scb func(ScanStat
 		}
 		defer tx.Rollback(ctx)
 
-		_, ok := completedItems.LoadOrStore(fmt.Sprintf("album_%s", ht.Album.Hash), struct{}{})
-		if !ok {
-			if err := tx.CreateAlbum(ctx, *ht.Album); err != nil {
-				return fmt.Errorf("create album: %w", err)
+		if ht.Album != nil {
+			_, ok := completedItems.LoadOrStore(fmt.Sprintf("album_%s", ht.Album.Hash), struct{}{})
+			if !ok {
+				if err := tx.CreateAlbum(ctx, *ht.Album); err != nil {
+					return fmt.Errorf("create album: %w", err)
+				}
 			}
 		}
 
@@ -161,15 +162,17 @@ func ScanAndUpdate(ctx context.Context, db *database.Database, scb func(ScanStat
 			}
 		}
 
-		for _, artist := range ht.Album.Artists {
-			_, ok := completedItems.LoadOrStore(fmt.Sprintf("artist_%s", artist.Hash), struct{}{})
-			if !ok {
-				if err := tx.CreateArtist(ctx, artist); err != nil {
-					return fmt.Errorf("create artist: %w", err)
+		if ht.Album != nil {
+			for _, artist := range ht.Album.Artists {
+				_, ok := completedItems.LoadOrStore(fmt.Sprintf("artist_%s", artist.Hash), struct{}{})
+				if !ok {
+					if err := tx.CreateArtist(ctx, artist); err != nil {
+						return fmt.Errorf("create artist: %w", err)
+					}
 				}
-			}
-			if err := tx.RelateAlbumArtist(ctx, ht.Album.Hash, artist.Hash); err != nil {
-				return fmt.Errorf("relate album artist: %w", err)
+				if err := tx.RelateAlbumArtist(ctx, ht.Album.Hash, artist.Hash); err != nil {
+					return fmt.Errorf("relate album artist: %w", err)
+				}
 			}
 		}
 
@@ -196,7 +199,7 @@ func ScanAndUpdate(ctx context.Context, db *database.Database, scb func(ScanStat
 		_, ok := seenFileHashes.Load(fhash)
 		if !ok {
 			scb(ScanStatus{
-				Status: "skip",
+				Status: "delete",
 				Name:   trackHash,
 			})
 			if err := db.DeleteTrack(ctx, trackHash); err != nil {

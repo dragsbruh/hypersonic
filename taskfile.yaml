@@ -4,4 +4,4 @@ dotenv: [".env"]
 
 tasks:
   up:
-    - goose -dir migrations postgres $DATABASE_URL up
+    - goose -dir internal/database/migrations postgres $DATABASE_URL up

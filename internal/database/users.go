@@ -32,7 +32,7 @@ func (db *Database) CreateUser(ctx context.Context, username, password string) (
 		Username:  username,
 		Password:  password,
 		CreatedAt: now,
-		LoginAt:   nil,
+		LoginAt:   sql.NullTime{Valid: false},
 	}
 
 	_, err := db.Exec(ctx, `

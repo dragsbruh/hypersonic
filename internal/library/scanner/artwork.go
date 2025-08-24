@@ -13,7 +13,11 @@ var ArtworkResolutions = []int{128, 256, 512}
 
 func ExtractArtwork(albumHash, trackPath string) error {
 	dir := filepath.Join(config.DataDir, "albums", albumHash)
+	tempDir := filepath.Join(config.DataDir, "tmp")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("mkdir: %w", err)
+	}
+	if err := os.MkdirAll(tempDir, os.ModePerm); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}
 	for _, res := range ArtworkResolutions {
@@ -22,7 +26,8 @@ func ExtractArtwork(albumHash, trackPath string) error {
 		if err == nil {
 			continue
 		}
-		tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_%d.webp", albumHash, res))
+
+		tmpPath := filepath.Join(tempDir, fmt.Sprintf("%s_%d.webp", albumHash, res))
 
 		cmd := exec.Command(
 			"ffmpeg",

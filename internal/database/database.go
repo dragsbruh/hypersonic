@@ -2,12 +2,16 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"embed"
 	"fmt"
 
 	"github.com/dragsbruh/hypersonic/internal/config"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 )
 
 // stolen cutely from sqlc
@@ -75,7 +79,27 @@ func (db *Database) QueryRow(ctx context.Context, sql string, args ...any) pgx.R
 	return db.DBTX().QueryRow(ctx, sql, args...)
 }
 
+func Migrate(ctx context.Context) error {
+	db, err := sql.Open("pgx", config.DatabaseUrl)
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+
+	goose.SetBaseFS(embedMigrations)
+	if err := goose.SetDialect("postgres"); err != nil {
+		panic(err)
+	}
+	if err := goose.Up(db, "migrations"); err != nil {
+		panic(err)
+	}
+	return nil
+}
+
 func Init(ctx context.Context) (*Database, error) {
+	if err := Migrate(ctx); err != nil {
+		return nil, fmt.Errorf("migrate: %w", err)
+	}
 	pool, err := pgxpool.New(ctx, config.DatabaseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("new pool: %w", err)
@@ -88,3 +112,6 @@ func Init(ctx context.Context) (*Database, error) {
 
 	return db, nil
 }
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS

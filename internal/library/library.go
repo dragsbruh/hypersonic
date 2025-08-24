@@ -65,7 +65,11 @@ func (t HypersonicTrack) FreshHash() string {
 	if len(t.Artists) > 0 {
 		firstArtist = t.Artists[0].Name
 	}
-	return GetHashOf(t.Name, t.Album.Name, firstArtist)
+	albumName := ""
+	if t.Album != nil {
+		albumName = t.Album.Name
+	}
+	return GetHashOf(t.Name, albumName, firstArtist)
 }
 
 func GetHashOf(args ...string) string {

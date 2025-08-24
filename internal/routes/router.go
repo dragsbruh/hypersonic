@@ -1,12 +1,18 @@
 package routes
 
 import (
+	"embed"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 
+	"github.com/dragsbruh/hypersonic/internal/config"
 	"github.com/dragsbruh/hypersonic/internal/database"
 	"github.com/dragsbruh/hypersonic/internal/media"
+	"github.com/dragsbruh/hypersonic/internal/routes/admin"
 	"github.com/dragsbruh/hypersonic/internal/routes/middleware"
+	"github.com/sirupsen/logrus"
 )
 
 func Router(db *database.Database) http.Handler {
@@ -46,5 +52,32 @@ func Router(db *database.Database) http.Handler {
 
 	root.HandleFunc("GET /media/albums/{hash}/{res}", mediaHandler.ServeArtwork)
 
-	return http.StripPrefix("/api", root)
+	root.Handle("/admin/", middleware.MustAdmin(admin.Router(db)))
+
+	actualRoot := http.NewServeMux()
+
+	if config.Production {
+		actualRoot.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			path := filepath.Join("dist", r.URL.Path)
+
+			file, err := staticEmbed.Open(path)
+			if os.IsNotExist(err) {
+				path = "dist/index.html"
+			} else if err != nil {
+				logrus.Errorf("error serving file: %v", err)
+				return
+			} else {
+				defer file.Close()
+			}
+
+			http.ServeFileFS(w, r, staticEmbed, path)
+		})
+	}
+
+	actualRoot.Handle("/api/", http.StripPrefix("/api", root))
+
+	return actualRoot
 }
+
+//go:embed dist/*
+var staticEmbed embed.FS

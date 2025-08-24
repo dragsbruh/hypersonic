@@ -79,7 +79,7 @@ func (db *Database) GetTrack(ctx context.Context, trackHash string) (*library.Hy
 		return nil, fmt.Errorf("scan: %w", err)
 	}
 	var album *library.HypersonicAlbum = nil
-	if dt.AlbumHash != nil {
+	if dt.AlbumHash.Valid {
 		album = da.Hyper(nil)
 	}
 
@@ -137,7 +137,7 @@ func (db *Database) GetTracksByArtist(ctx context.Context, artistHash string) ([
 			return nil, fmt.Errorf("scan row: %w", err)
 		}
 		var album *library.HypersonicAlbum = nil
-		if dt.AlbumHash != nil {
+		if dt.AlbumHash.Valid {
 			album = da.Hyper(nil)
 		}
 
@@ -197,7 +197,7 @@ func (db *Database) GetTracksByAlbum(ctx context.Context, albumHash string) ([]l
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 		var album *library.HypersonicAlbum = nil
-		if dt.AlbumHash != nil {
+		if dt.AlbumHash.Valid {
 			album = da.Hyper(nil)
 		}
 
@@ -299,7 +299,7 @@ func (db *Database) GetPaginatedTracks(ctx context.Context, cfg PaginationConfig
 			return nil, fmt.Errorf("scan row: %w", err)
 		}
 		var album *library.HypersonicAlbum = nil
-		if dt.AlbumHash != nil {
+		if dt.AlbumHash.Valid {
 			album = da.Hyper(nil)
 		}
 
@@ -368,7 +368,7 @@ func (db *Database) GetTracksByGenre(ctx context.Context, genre string) ([]libra
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 		var album *library.HypersonicAlbum = nil
-		if dt.AlbumHash != nil {
+		if dt.AlbumHash.Valid {
 			album = da.Hyper(nil)
 		}
 
