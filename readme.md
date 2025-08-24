@@ -1,5 +1,7 @@
 # hypersonic
 
+[frontend](https://github.com/dragsbruh/hypersonic-ui)
+
 ## todo
 
 - [ ] database queries
